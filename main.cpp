@@ -69,25 +69,51 @@ void gen_uml(const std::vector<StateChange> &edges,
   out.flush();
 }
 
-int main(int argc, char **argv) {
-  using namespace std;
-  string seq;
-  cin >> seq;
 
+
+std::vector<StateChange> encode_seq(const std::string &seq, state zero_id,
+                                    state one_id, int start, bool prefix = false) {
   int state_num = seq.length();
+  std::vector<StateChange> edges;
   bool first_val = digit_to_logical_val(seq[0]);
-  vector<StateChange> edges(state_num * 2);
-  size_t edge_count = 0;
   for (int i = 0; i < state_num; i++) {
     bool val = digit_to_logical_val(seq[i]);
-    edges[edge_count] = {i, (i + 1) % state_num, val,
-                         (i == state_num - 1 ? true : false)};
-    edge_count++;
-    edges[edge_count] = {i, (first_val == !val) ? 1 : 0, !val, 0};
-    edge_count++;
+    if (!prefix  || i != state_num - 1) {
+      edges.push_back(
+          {i, (i + 1 + start), val, (i == state_num -1 ? true : false)});
+    }
+    edges.push_back({i, (first_val == !val) ? one_id : zero_id, !val, 0});
+  }
+  return edges;
+}
+
+std::string get_prefix(const std::string &a, const std::string &b) {
+  size_t prefix_size = 0;
+  while (a[prefix_size] == b[prefix_size]) {
+    prefix_size++;
   }
 
+  return a.substr(0, prefix_size);
+}
+
+int main(int argc, char **argv) {
+  using namespace std;
+  string seq1, seq2;
+  cin >> seq1 >> seq2;
+
+  string prefix = get_prefix(seq1, seq2);
+
+  auto transitions = encode_seq(prefix, 0, 1, 0, true);
+  state branch_state = prefix.length() - 1;
+  auto u1_transitions =
+      encode_seq(seq1.substr(prefix.length() - 1), 0, 1, prefix.length() - 1);
+  auto u2_transitions =
+      encode_seq(seq2.substr(prefix.length() - 1), 0, 1, seq1.length() - 1);
+  transitions.insert(transitions.end(), u1_transitions.begin(),
+                     u1_transitions.end());
+  transitions.insert(transitions.end(), u2_transitions.begin(),
+                     u2_transitions.end());
   // print_table(edges);
-  gen_uml(edges);
+  gen_uml(transitions);
   return 0;
 }
